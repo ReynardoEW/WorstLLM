@@ -1,0 +1,31 @@
+# secrets: never commit, in any folder
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+keystore/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# training data and old runs: only the final weights are kept
+data/*
+!data/chat/
+data/chat/*
+!data/chat/tok.json
+!data/chat/valid.bin
+runs/*
+!runs/m16.pt
+runs_*.log
+
+# local run output
+deployments_*.json
+*.log
+nohup.out
+.DS_Store
+
+# built for a specific network, published after deploy
+site/index.html

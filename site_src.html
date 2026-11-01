@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WorstLLM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;800&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* a gas station: roadside price sign on top, pump meter below it, receipt tape printing beside it */
+:root {
+  color-scheme: light;
+  --forecourt: #1546c7; --forecourt-deep: #0e2f8f; --sign: #ffcc00; --tile: #0a1b4f; --digit: #ffffff;
+  --paper: #fbfaf4; --ink: #16181d; --ink-soft: #565a63; --on-blue: #ffffff; --on-blue-soft: #c9d6ff;
+  --display: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
+  --thermal: "Courier Prime", "Courier New", monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--forecourt); color: var(--on-blue); font-family: var(--display); font-size: 1.2rem; line-height: 1.3; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 44px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--sign); outline-offset: 2px; }
+.sign { background: var(--sign); color: var(--tile); border: 6px solid var(--tile); padding: clamp(16px, 3vw, 30px); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px clamp(20px, 4vw, 48px); align-items: center; }
+.brand h1 { margin: 0; font-weight: 800; font-size: clamp(4.2rem, 12vw, 9.5rem); line-height: .82; letter-spacing: -.015em; }
+.brand p { margin: 12px 0 0; font-size: clamp(1.25rem, 2.3vw, 1.75rem); font-weight: 600; line-height: 1.05; max-width: 17em; text-wrap: balance; }
+.grades { display: grid; gap: 8px; }
+.grade { display: grid; grid-template-columns: 4.6rem auto; align-items: center; gap: 12px; }
+.grade b { font-size: 1.45rem; font-weight: 800; line-height: 1; white-space: nowrap; }
+.grade small { display: block; font-size: .95rem; font-weight: 600; margin-top: 2px; }
+.price { display: flex; gap: 3px; font-size: clamp(2.5rem, 6vw, 4.6rem); font-weight: 800; font-variant-numeric: tabular-nums; }
+.cell { background: var(--tile); color: var(--digit); height: 1.12em; min-width: .62em; display: block; overflow: hidden; text-align: center; line-height: 1.12em; }
+.cell.sym { background: transparent; color: var(--tile); min-width: .34em; }
+.reel { display: block; transition: transform 1.5s cubic-bezier(.2,.8,.2,1); }
+.reel span { display: block; height: 1.12em; }
+.readout { grid-column: 1 / -1; margin: 0; font-size: 1.05rem; font-weight: 600; }
+.bay { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+.pump { display: grid; gap: 18px; min-width: 0; }
+.meter { background: var(--forecourt-deep); padding: 16px 18px; display: grid; gap: 10px; }
+.dial { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.dial > span { font-size: 1.3rem; font-weight: 600; }
+.dial .price { font-size: clamp(2rem, 4vw, 2.9rem); }
+.dial .cell.sym { color: var(--on-blue); }
+.status { margin: 0; color: var(--on-blue-soft); min-height: 1.3em; }
+.ask { display: grid; gap: 10px; }
+.ask label { font-size: 1.5rem; font-weight: 800; }
+.ask input { width: 100%; font: 400 1.15rem var(--thermal); padding: 13px 14px; border: 3px solid var(--tile); background: var(--paper); color: var(--ink); border-radius: 0; }
+.count { margin: 0; color: var(--on-blue-soft); }
+.count.over { color: var(--sign); font-weight: 800; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn { font: 800 1.45rem/1.05 var(--display); padding: 14px 10px; border: 3px solid var(--sign); cursor: pointer; border-radius: 0; }
+.btn.main { background: var(--sign); color: var(--tile); }
+.btn.alt { background: transparent; color: var(--sign); }
+.btn.alt:hover { background: var(--forecourt-deep); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.link { font: 600 1.05rem var(--display); color: var(--on-blue-soft); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; justify-self: start; }
+.facts { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 16px; }
+.facts dt { font-weight: 800; }
+.facts dd { margin: 0; color: var(--on-blue-soft); }
+.printer { min-width: 0; }
+.slot { height: 16px; background: var(--tile); border: 4px solid var(--forecourt-deep); }
+.tape { background: var(--paper); color: var(--ink); margin: 0 14px; padding: 8px 16px 20px; font: 400 .98rem/1.4 var(--thermal); max-height: 620px; overflow-y: auto; }
+.empty { padding-block: 16px; margin: 0; }
+.ticket { padding-block: 16px; border-bottom: 2px dashed var(--ink-soft); }
+.ticket:last-child { border-bottom: 0; }
+.ticket h2 { font: 700 1rem var(--thermal); margin: 0 0 8px; }
+.ticket p { margin: 0 0 8px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.ticket .bot { font-weight: 700; }
+.lines { display: grid; grid-template-columns: minmax(0, 1fr) auto; margin: 8px 0 0; color: var(--ink-soft); gap: 0 12px; }
+.lines dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.lines dt, .lines dd { font-size: .92rem; }
+footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 22px; color: var(--on-blue-soft); }
+@media (max-width: 800px) { .sign, .bay { grid-template-columns: minmax(0, 1fr); } .tape { max-height: none; } }
+@media (max-width: 440px) { .grade { grid-template-columns: 4.1rem auto; gap: 8px; } .price { font-size: 2.15rem; gap: 2px; } .actions { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .reel { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="sign" aria-label="current prices">
+    <div class="brand"><h1>worstllm</h1><p>the world's slowest, stupidest, most expensive "L"LM</p></div>
+    <div class="grades">
+      <div class="grade"><div><b>input</b><small>per 1M tok</small></div><div class="price" id="p-in" role="img"></div></div>
+      <div class="grade"><div><b>output</b><small>per 1M tok</small></div><div class="price" id="p-out" role="img"></div></div>
+      <div class="grade"><div><b>a reply</b><small>about</small></div><div class="price" id="p-reply" role="img"></div></div>
+    </div>
+    <p class="readout" id="readout">reading mainnet gas</p>
+  </section>
+  <section class="bay">
+    <div class="pump">
+      <div class="meter" aria-live="polite">
+        <div class="dial"><span>gas burned</span><div class="price" id="m-gas"></div></div>
+        <div class="dial"><span>this reply</span><div class="price" id="m-usd"></div></div>
+        <p class="status" id="status">yes it can be free. events are cooler</p>
+      </div>
+      <form class="ask" id="ask">
+        <label for="q">say something to it</label>
+        <input id="q" autocomplete="off" maxlength="160" value="are you stupid?">
+        <p class="count" id="count"></p>
+        <div class="actions">
+          <button class="btn main" type="button" id="emit">emit it onchain</button>
+          <button class="btn alt" type="submit" id="free">eth_call it for free</button>
+        </div>
+        <button class="link" type="button" id="reset">start a new chat</button>
+      </form>
+      <dl class="facts">
+        <dt>memory</dt><dd>last 16 tokens, like 33 chars</dd>
+        <dt>speed</dt><dd>5 tokens/s on a good day</dd>
+        <dt>capacity</dt><dd>15 tokens/s if everyone else leaves ethereum</dd>
+        <dt>brain</dt><dd>148,480 params running in every node</dd>
+      </dl>
+    </div>
+    <div class="printer"><div class="slot"></div><div class="tape" id="tape" aria-live="polite"><p class="empty" id="empty">no replies yet. say something</p></div></div>
+  </section>
+  <footer>
+    <span>no token, only llm tokens. not an investment. <a href="https://github.com/ReynardoEW/WorstLLM">source</a></span>
+    <span id="net"></span>
+  </footer>
+</div>
+<script>
+const CFG = /*CONFIG*/null/*END*/;
+const MAINNET_RPCS = ["https://ethereum-rpc.publicnode.com", "https://eth.drpc.org", "https://mainnet.gateway.tenderly.co", "https://xrpc.cl/eth"];
+const READ_RPCS = CFG.chain === "0x1" ? MAINNET_RPCS : [CFG.rpc];  // the next one takes over if one is down
+const CHAINLINK_ETH_USD = "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419";
+const IN_GAS = 229000, OUT_GAS = 277000, REPLY_GAS = 11190000, MAX_TOTAL = 60, CAP = 16777216, PADDED_SAFE = 11000000;
+const $ = id => document.getElementById(id);
+
+// ---------- tokenizer: byte-level BPE, same as tok.json ----------
+const BPE = (() => {
+  const bs = [], cs = [];
+  for (let i = 33; i <= 126; i++) bs.push(i);
+  for (let i = 161; i <= 172; i++) bs.push(i);
+  for (let i = 174; i <= 255; i++) bs.push(i);
+  cs.push(...bs);
+  let n = 0;
+  for (let b = 0; b < 256; b++) if (!bs.includes(b)) { bs.push(b); cs.push(256 + n++); }
+  const byte2u = {};
+  bs.forEach((b, i) => byte2u[b] = String.fromCodePoint(cs[i]));
+  const rank = new Map(CFG.merges.map((m, i) => [m[0] + "\u0000" + m[1], i]));
+  const pat = /'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+/gu;
+  const clean = s => s.replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/—/g, "-").replace(/…/g, "...").replace(/[^\x20-\x7e\n]|\n(?=\n)/g, "");
+  function bpe(word) {
+    let parts = [...word];
+    for (;;) {
+      let best = Infinity, at = -1;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const r = rank.get(parts[i] + "\u0000" + parts[i + 1]);
+        if (r !== undefined && r < best) { best = r; at = i; }
+      }
+      if (at < 0) return parts;
+      const merged = parts[at] + parts[at + 1];
+      const out = [];
+      for (let i = 0; i < parts.length; i++) {
+        if (i < parts.length - 1 && parts[i] === parts[at] && parts[i + 1] === parts[at + 1]) { out.push(merged); i++; }
+        else out.push(parts[i]);
+      }
+      parts = out;
+    }
+  }
+  return { encode(text) {
+    const ids = [];
+    for (const m of clean(text).match(pat) || []) {
+      const u = [...new TextEncoder().encode(m)].map(b => byte2u[b]).join("");
+      for (const p of bpe(u)) ids.push(CFG.vocab[p]);
+    }
+    return ids;
+  } };
+})();
+
+// ---------- rpc and abi ----------
+async function rpc(urls, method, params) {
+  let last;
+  for (const url of [].concat(urls)) {
+    try {
+      const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+      const j = await r.json();
+      if (j.error) {
+        const e = new Error(j.error.message);
+        // a revert is the contract's answer, the same everywhere. anything else, like a rate limit, tries the next rpc
+        e.rpc = /revert/i.test(j.error.message) || j.error.code === 3;
+        throw e;
+      }
+      return j.result;
+    } catch (e) { last = e; if (e.rpc) throw e; }
+  }
+  throw last;
+}
+const w = v => BigInt(v).toString(16).padStart(64, "0");
+const pad = h => h + "0".repeat((64 - h.length % 64) % 64);
+function encodeCall(sel, seed, n, prompt, state) {
+  const p = prompt.map(b => b.toString(16).padStart(2, "0")).join(""), s = state || "";
+  return sel + w(seed) + w(n) + w(128) + w(160 + pad(p).length / 2) + w(p.length / 2) + pad(p) + w(s.length / 2) + pad(s);
+}
+const bytesAt = (hex, off) => { const n = Number(BigInt("0x" + hex.slice(off * 2, off * 2 + 64))); return hex.slice(off * 2 + 64, off * 2 + 64 + n * 2); };
+const headAt = (hex, i) => Number(BigInt("0x" + hex.slice(i * 64, i * 64 + 64)));
+const ascii = h => new TextDecoder().decode(Uint8Array.from(h.match(/../g) || [], x => parseInt(x, 16)));
+
+// ---------- the sign ----------
+function makeReels(el, text) {
+  el.innerHTML = "";
+  el.setAttribute("aria-label", text);
+  for (const ch of text) {
+    const cell = document.createElement("span");
+    if (/\d/.test(ch)) {
+      cell.className = "cell";
+      const reel = document.createElement("span");
+      reel.className = "reel";
+      for (let d = 0; d < 10; d++) { const s = document.createElement("span"); s.textContent = d; s.setAttribute("aria-hidden", "true"); reel.append(s); }
+      reel.style.transform = `translateY(${-ch * 1.12}em)`;
+      cell.append(reel);
+    } else { cell.className = "cell sym"; cell.textContent = ch; }
+    el.append(cell);
+  }
+}
+function setReels(el, text, animate = true) {
+  const reels = el.querySelectorAll(".reel");
+  if ([...text].filter(c => /\d/.test(c)).length !== reels.length) return makeReels(el, text);
+  let i = 0;
+  for (const ch of text) if (/\d/.test(ch)) { const r = reels[i++]; r.style.transition = animate ? "" : "none"; r.style.transform = `translateY(${-ch * 1.12}em)`; }
+  el.setAttribute("aria-label", text);
+}
+const usd0 = v => "$" + Math.round(v).toLocaleString("en-US");
+const usd2 = v => "$" + v.toFixed(2);
+const gasText = g => String(Math.round(g)).padStart(8, "0").replace(/(\d{2})(\d{3})(\d{3})/, "$1,$2,$3");
+let usdPerGas = 0.0451e-9 * 2266.11, priced = false;
+const money = g => g * usdPerGas;
+function drawPrices(anim) {
+  setReels($("p-in"), usd0(money(IN_GAS) * 1e6), anim);
+  setReels($("p-out"), usd0(money(OUT_GAS) * 1e6), anim);
+  setReels($("p-reply"), usd2(money(REPLY_GAS)), anim);
+}
+async function refreshPrice() {
+  try {
+    const [block, answer] = await Promise.all([rpc(MAINNET_RPCS, "eth_getBlockByNumber", ["latest", false]), rpc(MAINNET_RPCS, "eth_call", [{ to: CHAINLINK_ETH_USD, data: "0x50d25bcd" }, "latest"])]);
+    const gwei = Number(BigInt(block.baseFeePerGas)) / 1e9, eth = Number(BigInt(answer)) / 1e8;
+    usdPerGas = gwei * 1e-9 * eth;
+    priced = true;
+    drawPrices(true);
+    $("readout").textContent = `mainnet block ${Number(block.number)}, gas ${gwei.toFixed(4)} gwei, eth $${Math.round(eth).toLocaleString("en-US")}. updates every block`;
+  } catch (e) {
+    if (!priced) $("readout").textContent = "can't read mainnet gas rn, showing the last price i know";
+  }
+}
+
+// ---------- the chat ----------
+let chain = { blob: null, last: "\n" };  // committed: what generate continues from
+let free = { blob: null, last: "\n" };   // preview only: nothing proves it
+let lastPreview = null;
+const prevText = () => $("q").value.trim();
+function promptFor(thread) {
+  const text = (thread.last.endsWith("\n") ? "" : "\n") + `User: ${prevText()}\nBot:`;
+  return BPE.encode(text);
+}
+function updateCount() {
+  const n = promptFor(free).length, over = n > 45;
+  $("count").textContent = over ? "too long. cut it down so the bot has tokens left to reply" : `prompt uses about ${n} of ${MAX_TOTAL} tokens, ${MAX_TOTAL - n} left for the reply`;
+  $("count").classList.toggle("over", over);
+  $("free").disabled = $("emit").disabled = over || busy;
+}
+let busy = false, spinner = null;
+function spin(tokens) {
+  clearInterval(spinner);
+  const goal = tokens * OUT_GAS, start = performance.now();
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  spinner = setInterval(() => {  // only an animation: the real number replaces it at the end
+    const g = goal * (1 - Math.exp(-(performance.now() - start) / 9000));
+    setReels($("m-gas"), gasText(g), false);
+    setReels($("m-usd"), usd2(money(g)), false);
+  }, 90);
+}
+function setBusy(on, tokens = 0) {
+  busy = on;
+  $("free").disabled = $("emit").disabled = on;
+  $("reset").disabled = on;
+  clearInterval(spinner);
+  if (on && tokens) spin(tokens);
+  if (!on) updateCount();
+}
+function ticket(kind, text, rows, link) {
+  $("empty").hidden = true;
+  const t = document.createElement("article");
+  t.className = "ticket";
+  const h = document.createElement("h2"); h.textContent = kind;
+  t.append(h);
+  const clean = text.replace(/^\n+/, "").replace(/\n+$/, "");
+  const cut = clean.lastIndexOf("\nBot:");
+  const a = document.createElement("p"); a.textContent = cut < 0 ? clean : clean.slice(0, cut);
+  t.append(a);
+  if (cut >= 0) { const b = document.createElement("p"); b.className = "bot"; b.textContent = clean.slice(cut + 1); t.append(b); }
+  const d = document.createElement("dl"); d.className = "lines";
+  for (const [k, v, href] of rows) {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd");
+    if (href) { const l = document.createElement("a"); l.href = href; l.textContent = v; l.rel = "noopener"; l.target = "_blank"; dd.append(l); } else dd.textContent = v;
+    d.append(dt, dd);
+  }
+  t.append(d);
+  $("tape").prepend(t);
+  $("tape").scrollTop = 0;
+}
+const randomSeed = () => { const b = crypto.getRandomValues(new Uint8Array(8)); return BigInt("0x" + [...b].map(x => x.toString(16).padStart(2, "0")).join("")); };
+const explain = e => {
+  const m = String((e && e.message) || e);
+  if (/user (rejected|denied)|4001/i.test(m)) return "u cancelled it in ur wallet. no gas spent";
+  if (/insufficient funds/i.test(m)) return "not enough eth in ur wallet for the gas";
+  if (/gas limit too high/i.test(m)) return "ur wallet raised the gas limit above the 16,777,216 cap. set the limit by hand in ur wallet, or send a shorter message";
+  if (/fetch|network/i.test(m)) return "can't reach the rpc rn. try again";
+  return "that failed: " + m.slice(0, 120);
+};
+
+async function runFree() {
+  if (!prevText()) { $("status").textContent = "type something first"; return; }
+  const prompt = promptFor(free), n = MAX_TOTAL - prompt.length, seed = randomSeed();
+  const asked = prevText();
+  setBusy(true, n);
+  $("status").textContent = "every opcode running, hold on";
+  const data = encodeCall(CFG.sel_preview, seed, n, prompt, free.blob);
+  try {
+    const out = (await rpc(READ_RPCS, "eth_call", [{ to: CFG.front, data: "0x" + data }, "latest"])).slice(2);
+    const text = ascii(bytesAt(out, headAt(out, 0)));
+    const blob = bytesAt(out, headAt(out, 2));
+    let gas = null;
+    try { gas = Number(BigInt(await rpc(READ_RPCS, "eth_estimateGas", [{ to: CFG.front, data: "0x" + data }]))); } catch (e) { /* the text is what matters */ }
+    lastPreview = { asked, seed, parent: free.blob };
+    free = { blob, last: text };
+    setBusy(false);
+    if (gas !== null) { setReels($("m-gas"), gasText(gas)); setReels($("m-usd"), usd2(money(gas))); }
+    ticket("eth_call, gone forever", text, gas !== null ? [["gas", gas.toLocaleString("en-US")], ["would cost", usd2(money(gas))], ["iq", "no"]] : [["iq", "no"]]);
+    $("status").textContent = "free. nothing went onchain, no proof, kinda sad";
+  } catch (e) { setBusy(false); $("status").textContent = explain(e); }
+}
+
+// wallets announce themselves through EIP-6963, older ones only set window.ethereum
+const announced = [];
+window.addEventListener("eip6963:announceProvider", e => { if (e.detail && e.detail.provider) announced.push(e.detail.provider); });
+const askWallets = () => window.dispatchEvent(new Event("eip6963:requestProvider"));
+askWallets();
+async function findWallet() {
+  askWallets();
+  for (let i = 0; i < 10 && !announced.length && !window.ethereum; i++) await new Promise(r => setTimeout(r, 100));  // extensions can load late
+  return announced[0] || window.ethereum || null;
+}
+const noWallet = () => location.protocol === "file:"
+  ? "wallets can't see a page opened as a file. serve it: python3 -m http.server 8000 --directory site, then open http://127.0.0.1:8000"
+  : "no wallet found in this browser. open this page in the browser that has ur wallet, or use eth_call for free";
+
+async function runEmit() {
+  if (!prevText()) { $("status").textContent = "type something first"; return; }
+  const wallet = await findWallet();
+  if (!wallet) { $("status").textContent = noWallet(); return; }
+  const asked = prevText();
+  const prompt = promptFor(chain), n = MAX_TOTAL - prompt.length;
+  // the same message after its preview keeps its seed, so u get the reply u just saw
+  const same = lastPreview && lastPreview.asked === asked && lastPreview.parent === chain.blob;
+  const seed = same ? lastPreview.seed : randomSeed();
+  setBusy(true);  // the meter waits until the tx is really sent
+  try {
+    $("status").textContent = "check ur wallet";
+    const [from] = await wallet.request({ method: "eth_requestAccounts" });
+    if (await wallet.request({ method: "eth_chainId" }) !== CFG.chain) {
+      try { await wallet.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CFG.chain }] }); }
+      catch (e) {
+        // wallets report an unknown network in different ways, so only a rejection stops here
+        if (e.code === 4001) throw e;
+        await wallet.request({ method: "wallet_addEthereumChain", params: [{ chainId: CFG.chain, chainName: CFG.net, nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: [CFG.rpc], blockExplorerUrls: [CFG.explorer] }] });
+        await wallet.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CFG.chain }] });
+      }
+      if (await wallet.request({ method: "eth_chainId" }) !== CFG.chain) throw new Error("ur wallet is not on " + CFG.net + ". switch to it and try again");
+    }
+    // rabby seems to raise the gas limit by about 1.5x, and a tx above the cap gets rejected,
+    // so there a run that needs too much gets a shorter reply budget until it fits
+    const safe = wallet.isRabby ? PADDED_SAFE : Math.floor(CAP / 1.02);
+    const estimate = async k => {
+      const d = "0x" + encodeCall(CFG.sel_generate, seed, k, prompt, chain.blob);
+      return [Number(BigInt(await rpc(READ_RPCS, "eth_estimateGas", [{ from, to: CFG.front, data: d }]))), d];
+    };
+    let budget = n, [need, data] = await estimate(n);
+    if (need > safe) {  // binary search: a reply that stops early makes small steps useless
+      let lo = 1, hi = n - 1;
+      budget = 1;
+      [need, data] = await estimate(1);
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2), [g, d] = await estimate(mid);
+        if (g <= safe) { lo = mid; budget = mid; need = g; data = d; } else hi = mid - 1;
+      }
+    }
+    const limit = Math.min(Math.ceil(need * 1.01), CAP);
+    $("status").textContent = budget < n ? `check ur wallet. reply cut to ${budget} tokens so the gas fits under the cap` : "check ur wallet";
+    const hash = await wallet.request({ method: "eth_sendTransaction", params: [{ from, to: CFG.front, data, gas: "0x" + limit.toString(16) }] });
+    $("status").textContent = "waiting for a block";
+    spin(n);
+    let rc = null;
+    for (let i = 0; i < 100 && !rc; i++) { rc = await rpc(READ_RPCS, "eth_getTransactionReceipt", [hash]); if (!rc) await new Promise(r => setTimeout(r, 3000)); }
+    if (!rc) throw new Error("the tx hasn't landed after 5 minutes. check it in ur wallet");
+    if (Number(rc.status) !== 1) throw new Error("the tx reverted. u still paid for its gas");
+    const rl = rc.logs.find(l => l.topics[0] === CFG.topic_reply), sl = rc.logs.find(l => l.topics[0] === CFG.topic_state);
+    const text = ascii(bytesAt(rl.data.slice(2), headAt(rl.data.slice(2), 0)));
+    const blob = bytesAt(sl.data.slice(2), headAt(sl.data.slice(2), 0));
+    const gas = Number(BigInt(rc.gasUsed));
+    chain = { blob, last: text };
+    free = { blob, last: text };
+    lastPreview = null;
+    location.hash = rl.topics[2];
+    setBusy(false);
+    setReels($("m-gas"), gasText(gas));
+    setReels($("m-usd"), usd2(money(gas)));
+    ticket("emitted onchain", text, [["gas", gas.toLocaleString("en-US")], ["at mainnet gas", usd2(money(gas))], ["iq", "no"], ["tx", hash.slice(0, 10) + "...", CFG.explorer + "/tx/" + hash]]);
+    $("status").textContent = "emitted. copy the link and anyone can continue this chat";
+  } catch (e) { setBusy(false); $("status").textContent = explain(e); }
+}
+
+// a link with a state hash opens that chat, and the state comes from its State event
+async function loadShared() {
+  const h = location.hash.slice(1);
+  if (!/^0x[0-9a-fA-F]{64}$/.test(h)) return;
+  $("status").textContent = "loading this chat from the chain";
+  try {
+    const logs = await rpc(READ_RPCS, "eth_getLogs", [{ address: CFG.front, fromBlock: CFG.from_block, toBlock: "latest", topics: [CFG.topic_state, h] }]);
+    if (!logs.length) { $("status").textContent = "that link has no state on this contract. starting a new chat"; return; }
+    const blob = bytesAt(logs[0].data.slice(2), headAt(logs[0].data.slice(2), 0));
+    const out = (await rpc(READ_RPCS, "eth_call", [{ to: CFG.front, data: CFG.sel_text + h.slice(2) }, "latest"])).slice(2);
+    const text = ascii(bytesAt(out, headAt(out, 0)));
+    chain = { blob, last: text };
+    free = { blob, last: text };
+    ticket("loaded from the chain", text, [["state", h.slice(0, 10) + "..."], ["iq", "no"]]);
+    $("status").textContent = "chat loaded. say something to continue it";
+  } catch (e) { $("status").textContent = explain(e); }
+}
+
+$("ask").addEventListener("submit", e => { e.preventDefault(); if (!busy) runFree(); });
+$("emit").addEventListener("click", () => { if (!busy) runEmit(); });
+$("q").addEventListener("input", updateCount);
+$("reset").addEventListener("click", () => {
+  chain = { blob: null, last: "\n" }; free = { blob: null, last: "\n" }; lastPreview = null;
+  history.replaceState(null, "", location.pathname + location.search);
+  $("tape").querySelectorAll(".ticket").forEach(t => t.remove());
+  $("empty").hidden = false;
+  setReels($("m-gas"), "00,000,000"); setReels($("m-usd"), "$0.00");
+  $("status").textContent = "new chat. yes it can be free. events are cooler";
+  updateCount();
+});
+
+makeReels($("p-in"), usd0(money(IN_GAS) * 1e6)); makeReels($("p-out"), usd0(money(OUT_GAS) * 1e6)); makeReels($("p-reply"), usd2(money(REPLY_GAS)));
+makeReels($("m-gas"), "00,000,000"); makeReels($("m-usd"), "$0.00");
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.querySelectorAll(".sign .reel").forEach(r => {
+  const end = r.style.transform; r.style.transition = "none"; r.style.transform = "translateY(0)";
+  requestAnimationFrame(() => requestAnimationFrame(() => { r.style.transition = ""; r.style.transform = end; }));
+});
+$("net").textContent = CFG.net_note;
+updateCount();
+refreshPrice();
+setInterval(refreshPrice, 12000);
+loadShared();
+window.BPE = BPE;
+</script>
+</body>
+</html>

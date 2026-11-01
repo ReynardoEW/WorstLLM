@@ -1,0 +1,29 @@
+negative control: 20-bit lanes on 64 inputs mismatch the reference, as they must
+EIP-7825: tx with cap+1 gas ACCEPTED, this anvil does not enforce the cap
+kernel      shape    exec gas  gas/MAC  deploy/w  kernel dep  bit-exact
+V0        32x64        61,446   30.003     242.3     243,433  yes
+V0        64x64       120,180   29.341     229.2     243,433  yes
+V1        32x64        11,581    5.655     242.3   2,639,161  yes
+V1        64x64        19,909    4.861     229.3   2,641,323  yes
+V1       128x64        36,519    4.458     222.8   2,641,323  yes
+V1        64x128       36,703    4.480     222.8   5,197,185  yes
+V1       256x64        69,741    4.257     219.5   2,641,323  yes
+V2        32x64        10,738    5.243     457.1   2,527,496  yes
+V2        64x64        16,208    3.957     336.3   2,529,658  yes
+V2       128x64        27,104    3.309     275.9   2,529,670  yes
+V2        64x128       29,226    3.568     329.8   4,967,026  yes
+V2       256x64        50,601    3.088     245.7   3,127,285  yes
+V3        32x64         7,624    3.723     665.4     201,072  yes
+V3        64x64        12,533    3.060     652.7     201,060  yes
+V3       128x64        20,714    2.529     593.8     201,072  yes
+V3        64x128       24,065    2.938     652.8     620,901  yes
+V3       256x64        41,219    2.516     593.7     346,647  yes
+V4        32x64         6,397    3.124     806.6      68,644  yes
+V4        64x64         9,710    2.371     793.6      68,644  yes
+V4       128x64        17,854    2.179     729.1      75,996  yes
+V4        64x128       19,271    2.352     793.9      75,972  yes
+V4       256x64        32,625    1.991     725.6      83,336  yes
+V4 tight  L=18 |w|<=15 64x64: exec 8,606 gas/MAC 2.101 (14 lanes)
+lane decode: 2,891 gas for 72 outputs = 40.2 gas/output, bit-exact
+config A tx: 163,840 MAC/token x 24 = 3,932,160 MACs, tx gasUsed 6,320,001 of 16,777,216 (exec 1.600 gas/MAC), last matrix bit-exact
+config A deploy: 43 code contracts, 573,232 bytes, 124,891,892 gas

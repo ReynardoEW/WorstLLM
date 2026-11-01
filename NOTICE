@@ -1,0 +1,16 @@
+WorstLLM
+
+Code: WTFPL v2, see LICENSE. This covers the code in this repository only.
+
+No warranty. This software and these contracts are provided "as is". You use
+them at your own risk, including any gas you spend. The authors are not liable
+for any loss.
+
+Training data: TinyChat by starhopp3r, licensed under CC BY-NC 4.0.
+https://huggingface.co/datasets/starhopp3r/TinyChat
+https://creativecommons.org/licenses/by-nc/4.0/
+
+data/chat/valid.bin is converted from TinyChat. runs/m16.pt and the deployed
+weights were trained on it. Treat those files as CC BY-NC 4.0: credit TinyChat,
+and do not use them commercially. Changes made: conversations were reformatted,
+filtered to ASCII and tokenized.
