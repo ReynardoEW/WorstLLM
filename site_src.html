@@ -385,7 +385,10 @@ async function runEmit() {
     }
     const limit = Math.min(Math.ceil(need * 1.01), CAP);
     $("status").textContent = budget < n ? `check ur wallet. reply cut to ${budget} tokens so the gas fits under the cap` : "check ur wallet";
-    const hash = await wallet.request({ method: "eth_sendTransaction", params: [{ from, to: CFG.front, data, gas: "0x" + limit.toString(16) }] });
+    // propose 1.15x the current base fee, or wallets suggest several times what the block needs. the margin goes to the tip
+    const base = BigInt((await rpc(READ_RPCS, "eth_getBlockByNumber", ["latest", false])).baseFeePerGas);
+    const maxFee = base * 115n / 100n, tip = maxFee - base;
+    const hash = await wallet.request({ method: "eth_sendTransaction", params: [{ from, to: CFG.front, data, gas: "0x" + limit.toString(16), maxFeePerGas: "0x" + maxFee.toString(16), maxPriorityFeePerGas: "0x" + tip.toString(16) }] });
     $("status").textContent = "waiting for a block";
     spin(n);
     let rc = null;

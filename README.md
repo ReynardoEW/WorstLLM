@@ -15,6 +15,16 @@ thx to claude, stupid idea like this can become a reality
 
 yes it can be gasfree using eth_call but using emitting events is cooler 
 
+## where
+
+site: [worstllm.reynardo.eth.limo](https://worstllm.reynardo.eth.limo)
+
+`WorstLLM`: [`0x47366ffc281b1877329d2aa90631027365ec2eb3`](https://etherscan.io/address/0x47366ffc281b1877329d2aa90631027365ec2eb3)
+
+engine: [`0xea684992a60507cf5a150fd9f0e7e649bab9f96a`](https://etherscan.io/address/0xea684992a60507cf5a150fd9f0e7e649bab9f96a)
+
+all 32 contracts are in `deployments_mainnet.json`
+
 ## specs
 
 | | |
@@ -68,7 +78,18 @@ needs foundry n solc. runs on local anvil with its public test account
 | `intmodel.py` | pure int python reference, contracts match it exactly |
 | `train_mlx.py` `train.py` `prep_chat.py` | data n training |
 | `t8n_check.py` | gas check against geth's evm |
+| `verify_rebuild.py` | rebuilds every contract, compares it with mainnet byte by byte |
+| `verify_contracts.py` `etherscan_verify.py` | submit source to sourcify n etherscan |
+| `build_site.py` `site_src.html` | builds the page in `site/` |
 | `m0_bench.py` | first kernel benchmark n the assembler |
+
+## check it urself
+
+```sh
+LLM_DATA=data/chat .venv/bin/python verify_rebuild.py
+```
+
+no key needed, sends nothing. the front contract is verified on etherscan. the engine n weights are hand written so etherscan won't take them, they're on sourcify instead
 
 ## bad stuff
 

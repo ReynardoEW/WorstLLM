@@ -22,10 +22,8 @@ runs/*
 runs_*.log
 
 # local run output
-deployments_*.json
+deployments_hoodi.json
 *.log
 nohup.out
 .DS_Store
 
-# built for a specific network, published after deploy
-site/index.html
